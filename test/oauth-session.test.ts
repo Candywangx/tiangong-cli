@@ -4,7 +4,7 @@ import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { CliError } from '../src/lib/errors.js';
+import { CliError, toErrorPayload } from '../src/lib/errors.js';
 import type { FetchLike, ResponseLike } from '../src/lib/http.js';
 import type { SupabaseRestRuntime } from '../src/lib/supabase-client.js';
 import {
@@ -628,6 +628,368 @@ test('logout preserves foreign client sessions and broad-permission cache files 
   } finally {
     __testInternals.SESSION_MEMORY_CACHE.clear();
     __testInternals.ACCESS_TOKEN_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+function staleRefreshFixture(sessionFile: string) {
+  const oauthRuntime = runtime({ sessionFile });
+  const identity = __testInternals.buildRuntimeIdentity(oauthRuntime);
+  const stale = __testInternals.buildCachedSessionRecord({
+    runtime: identity,
+    session: {
+      access_token: 'expired-synthetic-access',
+      refresh_token: 'rejected-synthetic-refresh',
+      expires_at: 1,
+      expires_in: 1,
+    },
+    userEmail: 'fixture@example.com',
+    grantedScopes: ['email'],
+    now: NOW,
+  });
+  __testInternals.writeCachedSessionRecord(sessionFile, stale);
+  return { oauthRuntime, identity, stale };
+}
+
+test('terminal OAuth refresh retires its persisted token across independent session loads', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-terminal-'));
+  const sessionFile = path.join(dir, 'session.json');
+  const { oauthRuntime, identity, stale } = staleRefreshFixture(sessionFile);
+  __testInternals.memoizeRecord(identity, stale);
+  let tokenPosts = 0;
+  const fetchImpl: FetchLike = async (url) => {
+    assert.ok(url.endsWith('/oauth/token'));
+    tokenPosts += 1;
+    return jsonResponse(
+      { error: 'invalid_grant', error_description: 'private-provider-detail' },
+      400,
+    );
+  };
+  try {
+    await assert.rejects(
+      resolveSupabaseUserSession({ runtime: oauthRuntime, fetchImpl, now: NOW }),
+      expectCliCode('SUPABASE_OAUTH_LOGIN_REQUIRED'),
+    );
+    assert.equal(existsSync(sessionFile), false);
+    const independent = await loadDistModule<typeof import('../src/lib/supabase-session.js')>(
+      'src/lib/supabase-session.js',
+    );
+    independent.__testInternals.SESSION_MEMORY_CACHE.clear();
+    await assert.rejects(
+      independent.resolveSupabaseUserSession({ runtime: oauthRuntime, fetchImpl, now: NOW }),
+      (error: unknown) => (error as CliError).code === 'SUPABASE_OAUTH_LOGIN_REQUIRED',
+    );
+    assert.equal(tokenPosts, 1);
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('OAuth token transport, rate-limit, upstream and protocol failures retain recoverable state', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-transient-'));
+  const sessionFile = path.join(dir, 'session.json');
+  const { oauthRuntime, stale } = staleRefreshFixture(sessionFile);
+  const failures: Array<{ fetchImpl: FetchLike; category: string; status: number | null }> = [
+    {
+      fetchImpl: async () => {
+        throw new Error('private-network-secret');
+      },
+      category: 'network',
+      status: null,
+    },
+    {
+      fetchImpl: async () => jsonResponse({ error: 'invalid_grant' }, 429),
+      category: 'rate_limit',
+      status: 429,
+    },
+    {
+      fetchImpl: async () => jsonResponse({ error: 'invalid_grant' }, 503),
+      category: 'upstream',
+      status: 503,
+    },
+    {
+      fetchImpl: async () => jsonResponse({ error: 'invalid_client' }, 400),
+      category: 'rejected',
+      status: 400,
+    },
+    { fetchImpl: async () => jsonResponse({}), category: 'protocol', status: null },
+  ];
+  try {
+    for (const { fetchImpl, category, status } of failures) {
+      await assert.rejects(
+        resolveSupabaseUserSession({ runtime: oauthRuntime, fetchImpl, now: NOW }),
+        (error) => {
+          assert.ok(error instanceof CliError);
+          assert.equal(error.code, 'SUPABASE_OAUTH_REFRESH_UNAVAILABLE');
+          assert.deepEqual(error.details, { stage: 'token', category, status });
+          assert.doesNotMatch(JSON.stringify(toErrorPayload(error)), /private-|synthetic/);
+          return true;
+        },
+      );
+      assert.deepEqual(JSON.parse(readFileSync(sessionFile, 'utf8')), stale);
+    }
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotated refresh survives failed UserInfo without bypassing identity verification', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-rotation-recovery-'));
+  const sessionFile = path.join(dir, 'session.json');
+  const { oauthRuntime, stale } = staleRefreshFixture(sessionFile);
+  let tokenPosts = 0;
+  let profiles = 0;
+  const fetchImpl: FetchLike = async (url, init) => {
+    if (url.endsWith('/oauth/token')) {
+      tokenPosts += 1;
+      assert.equal(
+        new URLSearchParams(String(init?.body)).get('refresh_token'),
+        tokenPosts === 1 ? stale.refresh_token : 'rotated-recovery-refresh',
+      );
+      return jsonResponse({
+        access_token: 'rotated-recovery-access',
+        refresh_token: 'rotated-recovery-refresh',
+        token_type: 'bearer',
+        expires_in: 3600,
+        scope: 'openid email profile',
+      });
+    }
+    assert.ok(url.endsWith('/oauth/userinfo'));
+    profiles += 1;
+    const checkpoint = JSON.parse(readFileSync(sessionFile, 'utf8'));
+    assert.equal(checkpoint.refresh_token, 'rotated-recovery-refresh');
+    assert.equal(checkpoint.expires_at, 0);
+    assert.equal(checkpoint.access_token, stale.access_token);
+    return profiles === 1
+      ? jsonResponse({ error: 'server_error' }, 503)
+      : jsonResponse({ sub: USER_ID, email: 'verified@example.com' });
+  };
+  try {
+    await assert.rejects(
+      resolveSupabaseUserSession({ runtime: oauthRuntime, fetchImpl, now: NOW }),
+      (error) =>
+        error instanceof CliError &&
+        error.code === 'SUPABASE_OAUTH_REFRESH_UNAVAILABLE' &&
+        JSON.stringify(error.details) ===
+          JSON.stringify({ stage: 'userinfo', category: 'upstream', status: 503 }),
+    );
+    assert.equal(
+      inspectSupabaseAuthStatus({ runtime: oauthRuntime, now: NOW }).sessionState,
+      'refresh-required',
+    );
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    const independent = await loadDistModule<typeof import('../src/lib/supabase-session.js')>(
+      'src/lib/supabase-session.js',
+    );
+    independent.__testInternals.SESSION_MEMORY_CACHE.clear();
+    const recovered = await independent.resolveSupabaseUserSession({
+      runtime: oauthRuntime,
+      fetchImpl,
+      now: NOW,
+    });
+    assert.equal(tokenPosts, 2);
+    assert.equal(profiles, 2);
+    assert.equal(recovered.userEmail, 'verified@example.com');
+    assert.equal(recovered.accessToken, 'rotated-recovery-access');
+    assert.ok((recovered.expiresAt ?? 0) > Math.floor(NOW.getTime() / 1000));
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('stale refresh failure preserves a newer or unrelated session and its memory record', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-stale-rejection-'));
+  const sessionFile = path.join(dir, 'session.json');
+  try {
+    for (const unrelated of [false, true]) {
+      const { oauthRuntime, identity, stale } = staleRefreshFixture(sessionFile);
+      const newer = {
+        ...stale,
+        refresh_token: 'newer-refresh',
+        access_token: 'newer-access',
+        updated_at_utc: '2026-08-31T00:00:01Z',
+        ...(unrelated ? { auth_binding_fingerprint: 'unrelated-client' } : {}),
+      };
+      await assert.rejects(
+        resolveSupabaseUserSession({
+          runtime: oauthRuntime,
+          now: NOW,
+          fetchImpl: async () => {
+            __testInternals.writeCachedSessionRecord(sessionFile, newer);
+            __testInternals.memoizeRecord(identity, newer);
+            return jsonResponse({ error: 'invalid_grant' }, 400);
+          },
+        }),
+        expectCliCode('SUPABASE_OAUTH_LOGIN_REQUIRED'),
+      );
+      assert.deepEqual(JSON.parse(readFileSync(sessionFile, 'utf8')), newer);
+      assert.deepEqual(__testInternals.SESSION_MEMORY_CACHE.get(identity.memoKey), newer);
+      __testInternals.SESSION_MEMORY_CACHE.clear();
+    }
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('stale refresh success cannot overwrite a newer login or resurrect a logged-out session', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-stale-success-'));
+  const sessionFile = path.join(dir, 'session.json');
+  try {
+    for (const replace of [false, true]) {
+      const { oauthRuntime, stale } = staleRefreshFixture(sessionFile);
+      const newer = { ...stale, refresh_token: 'newer-refresh' };
+      let profiles = 0;
+      await assert.rejects(
+        resolveSupabaseUserSession({
+          runtime: oauthRuntime,
+          now: NOW,
+          fetchImpl: async (url) => {
+            if (url.endsWith('/oauth/userinfo')) {
+              profiles += 1;
+              return jsonResponse({ sub: USER_ID, email: 'new@example.com' });
+            }
+            if (replace) __testInternals.writeCachedSessionRecord(sessionFile, newer);
+            else rmSync(sessionFile);
+            return jsonResponse({
+              access_token: 'obsolete-access',
+              refresh_token: 'obsolete-refresh',
+              token_type: 'bearer',
+              expires_in: 3600,
+            });
+          },
+        }),
+        expectCliCode('SUPABASE_OAUTH_SESSION_CHANGED'),
+      );
+      assert.equal(profiles, 0);
+      if (replace) assert.deepEqual(JSON.parse(readFileSync(sessionFile, 'utf8')), newer);
+      else assert.equal(existsSync(sessionFile), false);
+    }
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('concurrent callers retire one rejected token without resubmitting it', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-concurrent-terminal-'));
+  const sessionFile = path.join(dir, 'session.json');
+  const { oauthRuntime } = staleRefreshFixture(sessionFile);
+  let tokenPosts = 0;
+  try {
+    const results = await Promise.allSettled(
+      Array.from({ length: 5 }, () =>
+        resolveSupabaseUserSession({
+          runtime: oauthRuntime,
+          now: NOW,
+          fetchImpl: async () => {
+            tokenPosts += 1;
+            await new Promise<void>((resolve) => setImmediate(resolve));
+            return jsonResponse({ error: 'invalid_grant' }, 400);
+          },
+        }),
+      ),
+    );
+    assert.equal(tokenPosts, 1);
+    for (const result of results) {
+      assert.equal(result.status, 'rejected');
+      if (result.status === 'rejected')
+        assert.equal((result.reason as CliError).code, 'SUPABASE_OAUTH_LOGIN_REQUIRED');
+    }
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('memory-only refresh recovery still requires UserInfo and retires terminal tokens', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const oauthRuntime = runtime({ disableSessionCache: true });
+  const identity = __testInternals.buildRuntimeIdentity(oauthRuntime);
+  const stale = __testInternals.buildCachedSessionRecord({
+    runtime: identity,
+    session: {
+      access_token: 'expired-memory',
+      refresh_token: 'rotating-memory',
+      expires_at: 1,
+      expires_in: 1,
+    },
+    userEmail: 'memory@example.com',
+    now: NOW,
+  });
+  __testInternals.memoizeRecord(identity, stale);
+  try {
+    const recovered = await resolveSupabaseUserSession({
+      runtime: oauthRuntime,
+      now: NOW,
+      fetchImpl: async (url) =>
+        url.endsWith('/oauth/token')
+          ? jsonResponse({
+              access_token: 'new-memory',
+              refresh_token: 'new-memory-refresh',
+              token_type: 'bearer',
+              expires_in: 3600,
+            })
+          : jsonResponse({ sub: USER_ID, email: 'verified-memory@example.com' }),
+    });
+    assert.equal(recovered.userEmail, 'verified-memory@example.com');
+    assert.equal(recovered.sessionFile, null);
+    await assert.rejects(
+      resolveSupabaseUserSession({
+        runtime: oauthRuntime,
+        now: NOW,
+        forceRefresh: true,
+        fetchImpl: async () => jsonResponse({ error: 'invalid_grant' }, 400),
+      }),
+      expectCliCode('SUPABASE_OAUTH_LOGIN_REQUIRED'),
+    );
+    assert.equal(__testInternals.SESSION_MEMORY_CACHE.size, 0);
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+  }
+});
+
+test('profile success after an out-of-band session change cannot publish obsolete actor state', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-profile-race-'));
+  const sessionFile = path.join(dir, 'session.json');
+  const { oauthRuntime, stale } = staleRefreshFixture(sessionFile);
+  const newer = {
+    ...stale,
+    refresh_token: 'newer-login-refresh',
+    access_token: 'newer-login-access',
+  };
+  try {
+    await assert.rejects(
+      resolveSupabaseUserSession({
+        runtime: oauthRuntime,
+        now: NOW,
+        fetchImpl: async (url) => {
+          if (url.endsWith('/oauth/token'))
+            return jsonResponse({
+              access_token: 'rotated-access',
+              refresh_token: 'rotated-refresh',
+              token_type: 'bearer',
+              expires_in: 3600,
+            });
+          __testInternals.writeCachedSessionRecord(sessionFile, newer);
+          return jsonResponse({ sub: USER_ID, email: 'obsolete-actor@example.com' });
+        },
+      }),
+      expectCliCode('SUPABASE_OAUTH_SESSION_CHANGED'),
+    );
+    assert.deepEqual(JSON.parse(readFileSync(sessionFile, 'utf8')), newer);
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
     rmSync(dir, { recursive: true, force: true });
   }
 });

@@ -26,6 +26,7 @@ import {
   fetchOAuthUserInfo,
   refreshOAuthTokens,
   type OAuthPkceValues,
+  type OAuthTokenSet,
 } from './oauth-pkce.js';
 import { withStateFileLock } from './state-lock.js';
 import {
@@ -368,6 +369,66 @@ function dropMemoizedRecord(runtime: RuntimeIdentity): void {
   SESSION_MEMORY_CACHE.delete(runtime.memoKey);
 }
 
+function sameSessionRecord(
+  current: CachedSupabaseSessionRecord,
+  expected: CachedSupabaseSessionRecord,
+): boolean {
+  return (
+    current.supabase_url === expected.supabase_url &&
+    current.publishable_key_fingerprint === expected.publishable_key_fingerprint &&
+    current.auth_binding_fingerprint === expected.auth_binding_fingerprint &&
+    current.access_token === expected.access_token &&
+    current.refresh_token === expected.refresh_token &&
+    current.updated_at_utc === expected.updated_at_utc
+  );
+}
+
+// Called while holding the existing session/state locks. Re-read before each write so an
+// out-of-band login/logout cannot be overwritten by a response for an older session.
+function replaceRefreshRecord(
+  runtime: RuntimeIdentity,
+  expected: CachedSupabaseSessionRecord,
+  replacement: CachedSupabaseSessionRecord,
+  expectDiskRecord: boolean,
+): void {
+  const current = runtime.sessionFilePath
+    ? readCachedSessionRecord(runtime.sessionFilePath)
+    : getMemoizedRecord(runtime);
+  if ((current && !sameSessionRecord(current, expected)) || (!current && expectDiskRecord)) {
+    throw new CliError('The local OAuth session changed during refresh. Retry the command.', {
+      code: 'SUPABASE_OAUTH_SESSION_CHANGED',
+      exitCode: 1,
+    });
+  }
+  if (runtime.sessionFilePath) {
+    writeCachedSessionRecord(runtime.sessionFilePath, replacement);
+  }
+  memoizeRecord(runtime, replacement);
+}
+
+function retireRejectedRefresh(
+  runtime: RuntimeIdentity,
+  rejected: CachedSupabaseSessionRecord,
+): void {
+  if (runtime.sessionFilePath) {
+    const current = readCachedSessionRecord(runtime.sessionFilePath);
+    if (current && sameSessionRecord(current, rejected)) {
+      rmSync(runtime.sessionFilePath, { force: true });
+    }
+  }
+  const memoized = getMemoizedRecord(runtime);
+  if (memoized && sameSessionRecord(memoized, rejected)) {
+    dropMemoizedRecord(runtime);
+  }
+}
+
+function requireOAuthLogin(): never {
+  throw new CliError(
+    'No usable OAuth session is available. Run `tiangong-lca auth login` in a trusted terminal.',
+    { code: 'SUPABASE_OAUTH_LOGIN_REQUIRED', exitCode: 1 },
+  );
+}
+
 async function withSessionOperationLock<T>(memoKey: string, task: () => Promise<T>): Promise<T> {
   const previous = SESSION_OPERATION_CHAINS.get(memoKey) ?? Promise.resolve();
   let release!: () => void;
@@ -413,12 +474,14 @@ async function refreshWithRefreshToken(options: {
   fetchImpl: FetchLike;
   timeoutMs: number;
   now: Date;
+  onRotation?: (tokens: OAuthTokenSet) => void;
 }): Promise<CachedSupabaseSessionRecord | null> {
   const normalizedRefreshToken = trimToken(options.refreshToken);
-  if (!normalizedRefreshToken) {
+  if (options.runtime.authMode !== 'oauth' || !normalizedRefreshToken) {
     return null;
   }
 
+  let stage: 'token' | 'userinfo' = 'token';
   try {
     const tokens = await refreshOAuthTokens({
       projectBaseUrl: options.runtimeIdentity.projectBaseUrl,
@@ -427,6 +490,8 @@ async function refreshWithRefreshToken(options: {
       fetchImpl: options.fetchImpl,
       timeoutMs: options.timeoutMs,
     });
+    options.onRotation?.(tokens);
+    stage = 'userinfo';
     const userInfo = await fetchOAuthUserInfo({
       projectBaseUrl: options.runtimeIdentity.projectBaseUrl,
       accessToken: tokens.accessToken,
@@ -445,8 +510,34 @@ async function refreshWithRefreshToken(options: {
       grantedScopes: tokens.scope,
       now: options.now,
     });
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof CliError && error.code === 'SUPABASE_OAUTH_SESSION_CHANGED') {
+      throw error;
+    }
+    const details =
+      error instanceof CliError && error.code === 'OAUTH_REQUEST_FAILED' && isRecord(error.details)
+        ? error.details
+        : null;
+    const status = details && typeof details.status === 'number' ? details.status : null;
+    if (stage === 'token' && status === 400 && details?.error === 'invalid_grant') {
+      return null;
+    }
+    // Provider text, thrown network errors, and credentials never enter the error payload.
+    const category =
+      status === 429
+        ? 'rate_limit'
+        : status !== null && status >= 500
+          ? 'upstream'
+          : status !== null
+            ? 'rejected'
+            : error instanceof CliError
+              ? 'protocol'
+              : 'network';
+    throw new CliError('OAuth refresh could not complete. Retry the command later.', {
+      code: 'SUPABASE_OAUTH_REFRESH_UNAVAILABLE',
+      exitCode: 1,
+      details: { stage, category, status },
+    });
   }
 }
 
@@ -547,6 +638,8 @@ async function resolveAndPersistSession(options: {
           : null;
 
     if (refreshCandidate) {
+      let checkpoint = refreshCandidate;
+      let expectDiskRecord = refreshCandidate === cachedFromDisk;
       const refreshed = await refreshWithRefreshToken({
         runtime,
         runtimeIdentity,
@@ -554,26 +647,32 @@ async function resolveAndPersistSession(options: {
         fetchImpl: options.fetchImpl,
         timeoutMs: options.timeoutMs,
         now: options.now,
+        onRotation: (tokens) => {
+          const rotated = {
+            ...refreshCandidate,
+            refresh_token: tokens.refreshToken,
+            // A rotation checkpoint is recovery state, not verified profile evidence. Keep it
+            // expired so neither this invocation nor a later process can use it as a session.
+            expires_at: 0,
+            updated_at_utc: options.now.toISOString(),
+          };
+          replaceRefreshRecord(runtimeIdentity, refreshCandidate, rotated, expectDiskRecord);
+          checkpoint = rotated;
+          expectDiskRecord = runtimeIdentity.sessionFilePath !== null;
+        },
       });
 
       if (refreshed) {
-        if (runtimeIdentity.sessionFilePath) {
-          writeCachedSessionRecord(runtimeIdentity.sessionFilePath, refreshed);
-        }
-        memoizeRecord(runtimeIdentity, refreshed);
+        replaceRefreshRecord(runtimeIdentity, checkpoint, refreshed, expectDiskRecord);
         return toResolvedSession(refreshed, runtimeIdentity, 'refresh');
       }
+      retireRejectedRefresh(runtimeIdentity, refreshCandidate);
+      requireOAuthLogin();
     }
   }
 
   dropMemoizedRecord(runtimeIdentity);
-  throw new CliError(
-    'No usable OAuth session is available. Run `tiangong-lca auth login` in a trusted terminal.',
-    {
-      code: 'SUPABASE_OAUTH_LOGIN_REQUIRED',
-      exitCode: 1,
-    },
-  );
+  requireOAuthLogin();
 }
 
 export async function resolveSupabaseUserSession(options: {

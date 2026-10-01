@@ -24,9 +24,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-09-24
-lastReviewedCommit: 4f1f0543146e554b4f088e2eeac54f223fb3651f
-lastReviewedNote: 'Reviewed for CLI #370 at 4f1f054: package version and bound fixtures change; no secret, Trusted Publisher setting, workflow, dependency, lock or tag rule changes.'
+lastReviewedAt: 2026-10-01
+lastReviewedCommit: ba286d42db5a48f8b70fd649162fb45586e7cfa2
+lastReviewedNote: 'Reviewed CLI #392: no dependency, configuration, credential, workflow, tag or publication setup changes.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml

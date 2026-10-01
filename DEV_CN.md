@@ -22,9 +22,9 @@ checkPaths:
   - src/**
   - scripts/**
   - .github/workflows/**
-lastReviewedAt: 2026-09-24
-lastReviewedCommit: 709b4f402ddc2febe2d81b6cb61461ea15d66463
-lastReviewedNote: '针对 CLI #368 审阅 709b4f4：规范 0.2.3 与 SDK 0.4.1 的校验兼容已验证；包版本仍为 0.1.21，发布需独立流程。'
+lastReviewedAt: 2026-10-01
+lastReviewedCommit: ba286d42db5a48f8b70fd649162fb45586e7cfa2
+lastReviewedNote: 'Reviewed CLI #392: terminal refresh retirement and expired rotation checkpoints preserve the existing OAuth-only and headless boundaries.'
 related:
   - AGENTS.md
   - .docpact/config.yaml
@@ -252,6 +252,8 @@ TIANGONG_LCA_SESSION_FILE=
 TIANGONG_LCA_DISABLE_SESSION_CACHE=false
 TIANGONG_LCA_FORCE_REAUTH=false
 ```
+
+OAuth token 端点明确返回 HTTP 400 `invalid_grant` 后，仅退役当前被拒绝的本地会话；后续命令要求重新登录，不再重复提交该 refresh token。网络、限流、上游或协议失败保留恢复状态并返回脱敏错误。已旋转的新 refresh token 会在 UserInfo 请求之前写入 access 状态过期的恢复检查点，只有身份验证成功才发布可用会话；迟到响应不能覆盖或删除更新的登录会话。
 
 `TIANGONG_LCA_OAUTH_CLIENT_ID` 是环境专属、已注册的 public client ID，不是 secret。先在可信终端运行 `tiangong-lca auth login`；后续 Edge Functions 与 direct Supabase 命令统一使用 OAuth access token，过期前按需旋转 refresh token。默认回调必须与 OAuth client 中登记的完整 URI 完全一致；OAuth client redirect URI 不支持 wildcard。
 
