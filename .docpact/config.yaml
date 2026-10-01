@@ -1,8 +1,8 @@
 version: 1
 layout: repo
 lastReviewedAt: '2026-10-01'
-lastReviewedCommit: '4cefa46be940ece66847be9d60472c19e5feecaa'
-lastReviewedNote: 'Reviewed CLI #392 OAuth refresh recovery; ownership, routing, coverage and repository facts remain unchanged.'
+lastReviewedCommit: '835e7da686657eb12dbd3a3d86dcd962bd0f3c7d'
+lastReviewedNote: 'Reviewed CLI #394 version-only 0.1.23 preparation from merged OAuth recovery; repository facts, routing, ownership and coverage remain unchanged.'
 
 catalog:
   repos:

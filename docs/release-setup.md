@@ -25,8 +25,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-01
-lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
-lastReviewedNote: 'Reviewed CLI #392: no dependency, configuration, credential, workflow, tag or publication setup changes.'
+lastReviewedCommit: 835e7da686657eb12dbd3a3d86dcd962bd0f3c7d
+lastReviewedNote: 'Reviewed CLI #394: no secret, environment, dependency, lock, workflow, tag or publication setup changes.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml

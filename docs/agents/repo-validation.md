@@ -32,8 +32,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-01
-lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
-lastReviewedNote: 'Reviewed CLI #392 deterministic terminal, rotation recovery, concurrent and stale-response regressions; the canonical full gate and full-source coverage remain required.'
+lastReviewedCommit: 835e7da686657eb12dbd3a3d86dcd962bd0f3c7d
+lastReviewedNote: 'Reviewed CLI #394: real bound-fixture RED/GREEN, package, full coverage, Docpact and exact-head four-platform gates remain required.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml

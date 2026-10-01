@@ -26,14 +26,16 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-01
-lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
-lastReviewedNote: 'Reviewed CLI #392 feature delivery; package publication still requires a separate qualified version PR, automated release and exact workspace adoption.'
+lastReviewedCommit: 835e7da686657eb12dbd3a3d86dcd962bd0f3c7d
+lastReviewedNote: 'Reviewed CLI #394: next-patch and target absence prechecks, eight bound fixture updates, unchanged lock/runtime graph and canonical release continuation.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml
   - ./release-setup.md
   - ./agents/repo-validation.md
 ---
+
+Review note, 2026-10-01: CLI #394 prepares 0.1.23 from main `835e7da686657eb12dbd3a3d86dcd962bd0f3c7d` (reviewed source PR #393 / Issue #392). The helper selected next patch 0.1.23 from repository and npm latest 0.1.22, proved the target unpublished, and a fresh exact remote tag read found cli-v0.1.23 absent. Package identity alone made the bound fixture suite RED (10 failures out of 136 tests); advancing the eight directly bound values restored GREEN. Six values bind the running CLI; the other two supply explicit version parameters and remain behaviorally passing while advancing their release identity. Dependencies, the sole frozen pnpm lock, runtime source, public exports, workflows and authentication capabilities remain byte-identical. Publish only after the release PR and exact-head four-platform qualification, automatic merge tag, native pnpm Trusted Publishing/provenance, fresh credential-free consumer and exact workspace adoption; local publication and manual tags remain forbidden.
 
 Review note, 2026-09-24: CLI #370 prepares 0.1.22 from exact merged source `916032f8d77d5d533a1b9566b6c2a1f05ef968ae` (CLI #368). `next-version --part patch` chose 0.1.22 from published 0.1.21; `assert-unpublished` and remote tag readback found no 0.1.22 publication/tag before editing. The version-only diff is package identity plus eight fixtures, leaving dependencies, pnpm lock and workflows unchanged. The exact-head four-platform gate, automatic merge tag, Trusted Publishing/provenance, public consumer verification and exact root integration are still required.
 

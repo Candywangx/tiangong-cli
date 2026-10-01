@@ -38,8 +38,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-01
-lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
-lastReviewedNote: 'Reviewed CLI #392 OAuth refresh recovery against the existing private session, actor binding, validation and release boundaries.'
+lastReviewedCommit: 835e7da686657eb12dbd3a3d86dcd962bd0f3c7d
+lastReviewedNote: 'Reviewed CLI #394: separate package identity and directly bound fixture preparation retains all existing source, validation, release and authorization boundaries.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
@@ -50,6 +50,8 @@ related:
   - docs/release-runbook.md
   - docs/release-setup.md
 ---
+
+Review note, 2026-10-01: CLI #394 prepares the separate version-only 0.1.23 release from reviewed OAuth recovery PR #393 at main `835e7da686657eb12dbd3a3d86dcd962bd0f3c7d`. Only package identity and eight directly bound fixture values change. Source runtime, dependencies, lock, public exports, authorization and release workflows remain unchanged. At preparation, npm latest is 0.1.22 and cli-v0.1.23 is absent; publication still requires the canonical release workflow and provenance verification.
 
 Review note, 2026-09-24: CLI #370 prepares a separate version-only 0.1.22 release after merged #368 / PR #369 at `916032f8d77d5d533a1b9566b6c2a1f05ef968ae`. Only package identity and eight directly bound test fixtures change; dependencies, lock, runtime, public exports, authorization and release workflows do not. npm latest remains 0.1.21 and the 0.1.22 tag is absent before this branch merges.
 
