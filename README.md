@@ -31,10 +31,12 @@ checkPaths:
   - test/auth-identity*.test.ts
   - test/public-auth-identity-receipt.test.ts
   - test/lca-release*.test.ts
-lastReviewedAt: 2026-09-24
-lastReviewedCommit: 4f1f0543146e554b4f088e2eeac54f223fb3651f
-lastReviewedNote: 'Reviewed for CLI #370 at 4f1f054: the in-repository 0.1.22 preparation is distinct from currently published 0.1.21; source behavior comes from merged CLI #368.'
+lastReviewedAt: 2026-10-01
+lastReviewedCommit: 835e7da686657eb12dbd3a3d86dcd962bd0f3c7d
+lastReviewedNote: 'Reviewed CLI #394: 0.1.23 is a release candidate from reviewed OAuth recovery; npm latest remains 0.1.22 until automatic publication is verified.'
 ---
+
+Review note, 2026-10-01: CLI #394 prepares 0.1.23 from reviewed OAuth recovery PR #393. The source retires conclusively rejected refresh tokens and preserves rotated-token recovery after profile outages. This repository version is a candidate until the canonical release tag and npm provenance are verified; npm latest is 0.1.22 at preparation. No dataset or new live-account authorization is published by this software release.
 
 Review note, 2026-09-24: CLI #370 prepares 0.1.22 from merged non-flow reference source #368. The repository package version is a candidate until the canonical merge-created tag and npm provenance are verified; published npm latest was 0.1.21 at preparation time. No dataset is published by this CLI release.
 

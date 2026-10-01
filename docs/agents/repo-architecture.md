@@ -31,8 +31,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-01
-lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
-lastReviewedNote: 'Reviewed CLI #392: exact rejected-session retirement, expired rotation recovery checkpoints and redacted transient errors preserve UserInfo verification.'
+lastReviewedCommit: 835e7da686657eb12dbd3a3d86dcd962bd0f3c7d
+lastReviewedNote: 'Reviewed CLI #394: version-only preparation leaves runtime ownership, source behavior, private OAuth recovery and public exports unchanged.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
