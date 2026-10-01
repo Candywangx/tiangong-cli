@@ -21,9 +21,9 @@ checkPaths:
   - .oxlintrc.json
   - src/**
   - test/**
-lastReviewedAt: 2026-09-24
-lastReviewedCommit: 709b4f402ddc2febe2d81b6cb61461ea15d66463
-lastReviewedNote: '针对 CLI #368 审阅 709b4f4：内置规范升级至 0.2.3，SDK 锁至 0.4.1，Other parameter 依文字计量基准校验；命令、认证和发布边界不变。'
+lastReviewedAt: 2026-10-01
+lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
+lastReviewedNote: 'Reviewed CLI #392: OAuth refresh recovery follows the existing shared session owner, private-file and actor verification boundaries; no command, environment or release capability changes.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml

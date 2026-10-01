@@ -25,9 +25,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-09-24
-lastReviewedCommit: 4f1f0543146e554b4f088e2eeac54f223fb3651f
-lastReviewedNote: 'Reviewed for CLI #370 at 4f1f054: 0.1.22 is version-only preparation over source merge 916032f; npm latest is 0.1.21 and no cli-v0.1.22 tag exists. Automatic merge-tag, Trusted Publishing and provenance remain mandatory.'
+lastReviewedAt: 2026-10-01
+lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
+lastReviewedNote: 'Reviewed CLI #392 feature delivery; package publication still requires a separate qualified version PR, automated release and exact workspace adoption.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml

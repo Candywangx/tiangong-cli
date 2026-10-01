@@ -477,6 +477,7 @@ test('internal session helpers cover refresh null paths, direct resolve branches
     now: new Date('2026-04-06T00:00:00.000Z'),
   });
   __testInternals.memoizeRecord(identity, freshRecord);
+  __testInternals.writeCachedSessionRecord(sessionFile, freshRecord);
 
   try {
     const fromMemory = await __testInternals.resolveAndPersistSession({
@@ -533,8 +534,8 @@ test('internal session helpers cover refresh null paths, direct resolve branches
       }),
       null,
     );
-    assert.equal(
-      await __testInternals.refreshWithRefreshToken({
+    await assert.rejects(
+      __testInternals.refreshWithRefreshToken({
         runtime,
         runtimeIdentity: {
           ...identity,
@@ -547,7 +548,7 @@ test('internal session helpers cover refresh null paths, direct resolve branches
         timeoutMs: 25,
         now: new Date('2026-04-06T00:00:00.000Z'),
       }),
-      null,
+      { code: 'SUPABASE_OAUTH_REFRESH_UNAVAILABLE' },
     );
     const authClient = __testInternals.createSupabaseAuthClient(
       identity,
