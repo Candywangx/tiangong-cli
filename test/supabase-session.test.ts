@@ -477,6 +477,7 @@ test('internal session helpers cover refresh null paths, direct resolve branches
     now: new Date('2026-04-06T00:00:00.000Z'),
   });
   __testInternals.memoizeRecord(identity, freshRecord);
+  __testInternals.writeCachedSessionRecord(sessionFile, freshRecord);
 
   try {
     const fromMemory = await __testInternals.resolveAndPersistSession({

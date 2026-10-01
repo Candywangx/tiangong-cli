@@ -38,7 +38,7 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-01
-lastReviewedCommit: ba286d42db5a48f8b70fd649162fb45586e7cfa2
+lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
 lastReviewedNote: 'Reviewed CLI #392 OAuth refresh recovery against the existing private session, actor binding, validation and release boundaries.'
 related:
   - .docpact/config.yaml

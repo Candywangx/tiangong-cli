@@ -389,12 +389,11 @@ function replaceRefreshRecord(
   runtime: RuntimeIdentity,
   expected: CachedSupabaseSessionRecord,
   replacement: CachedSupabaseSessionRecord,
-  expectDiskRecord: boolean,
 ): void {
   const current = runtime.sessionFilePath
     ? readCachedSessionRecord(runtime.sessionFilePath)
     : getMemoizedRecord(runtime);
-  if ((current && !sameSessionRecord(current, expected)) || (!current && expectDiskRecord)) {
+  if (!current || !sameSessionRecord(current, expected)) {
     throw new CliError('The local OAuth session changed during refresh. Retry the command.', {
       code: 'SUPABASE_OAUTH_SESSION_CHANGED',
       exitCode: 1,
@@ -599,47 +598,34 @@ async function resolveAndPersistSession(options: {
       timeoutMs: options.timeoutMs,
     });
   }
-  const memoized = getMemoizedRecord(runtimeIdentity);
-  if (
-    !options.forceRefresh &&
-    !runtime.forceReauth &&
-    memoized &&
-    recordMatchesRuntime(memoized, runtimeIdentity) &&
-    isSessionFresh(memoized, options.now)
-  ) {
-    return toResolvedSession(memoized, runtimeIdentity, 'memory');
-  }
-
   const cachedFromDisk =
     runtimeIdentity.sessionFilePath !== null
       ? readCachedSessionRecord(runtimeIdentity.sessionFilePath)
       : null;
+  const memoized = getMemoizedRecord(runtimeIdentity);
+  // A private file is authoritative when enabled. A deleted, unreadable or foreign record
+  // must never be replaced by an older in-process session, including on forced refresh.
+  const current = runtimeIdentity.sessionFilePath !== null ? cachedFromDisk : memoized;
   if (
     !options.forceRefresh &&
     !runtime.forceReauth &&
-    cachedFromDisk &&
-    recordMatchesRuntime(cachedFromDisk, runtimeIdentity) &&
-    isSessionFresh(cachedFromDisk, options.now)
+    current &&
+    recordMatchesRuntime(current, runtimeIdentity) &&
+    isSessionFresh(current, options.now)
   ) {
-    memoizeRecord(runtimeIdentity, cachedFromDisk);
-    return toResolvedSession(cachedFromDisk, runtimeIdentity, 'cache');
+    const source = memoized && sameSessionRecord(current, memoized) ? 'memory' : 'cache';
+    memoizeRecord(runtimeIdentity, current);
+    return toResolvedSession(current, runtimeIdentity, source);
   }
 
   if (!runtime.forceReauth) {
     const refreshCandidate =
-      cachedFromDisk &&
-      recordMatchesRuntime(cachedFromDisk, runtimeIdentity) &&
-      trimToken(cachedFromDisk.refresh_token)
-        ? cachedFromDisk
-        : memoized &&
-            recordMatchesRuntime(memoized, runtimeIdentity) &&
-            trimToken(memoized.refresh_token)
-          ? memoized
-          : null;
+      current && recordMatchesRuntime(current, runtimeIdentity) && trimToken(current.refresh_token)
+        ? current
+        : null;
 
     if (refreshCandidate) {
       let checkpoint = refreshCandidate;
-      let expectDiskRecord = refreshCandidate === cachedFromDisk;
       const refreshed = await refreshWithRefreshToken({
         runtime,
         runtimeIdentity,
@@ -656,14 +642,13 @@ async function resolveAndPersistSession(options: {
             expires_at: 0,
             updated_at_utc: options.now.toISOString(),
           };
-          replaceRefreshRecord(runtimeIdentity, refreshCandidate, rotated, expectDiskRecord);
+          replaceRefreshRecord(runtimeIdentity, refreshCandidate, rotated);
           checkpoint = rotated;
-          expectDiskRecord = runtimeIdentity.sessionFilePath !== null;
         },
       });
 
       if (refreshed) {
-        replaceRefreshRecord(runtimeIdentity, checkpoint, refreshed, expectDiskRecord);
+        replaceRefreshRecord(runtimeIdentity, checkpoint, refreshed);
         return toResolvedSession(refreshed, runtimeIdentity, 'refresh');
       }
       retireRejectedRefresh(runtimeIdentity, refreshCandidate);
@@ -699,6 +684,7 @@ export async function resolveSupabaseUserSession(options: {
   if (!forceRefresh && !options.runtime.forceReauth) {
     const memoized = getMemoizedRecord(runtimeIdentity);
     if (
+      runtimeIdentity.sessionFilePath === null &&
       memoized &&
       recordMatchesRuntime(memoized, runtimeIdentity) &&
       isSessionFresh(memoized, now)
@@ -709,8 +695,9 @@ export async function resolveSupabaseUserSession(options: {
     if (runtimeIdentity.sessionFilePath) {
       const cached = readCachedSessionRecord(runtimeIdentity.sessionFilePath);
       if (cached && recordMatchesRuntime(cached, runtimeIdentity) && isSessionFresh(cached, now)) {
+        const source = memoized && sameSessionRecord(cached, memoized) ? 'memory' : 'cache';
         memoizeRecord(runtimeIdentity, cached);
-        return toResolvedSession(cached, runtimeIdentity, 'cache');
+        return toResolvedSession(cached, runtimeIdentity, source);
       }
     }
   }
@@ -791,13 +778,9 @@ export function inspectSupabaseAuthStatus(options: {
     };
   }
 
-  const memoized = getMemoizedRecord(runtimeIdentity);
-  const cached =
-    memoized && recordMatchesRuntime(memoized, runtimeIdentity)
-      ? memoized
-      : runtimeIdentity.sessionFilePath
-        ? readCachedSessionRecord(runtimeIdentity.sessionFilePath)
-        : null;
+  const cached = runtimeIdentity.sessionFilePath
+    ? readCachedSessionRecord(runtimeIdentity.sessionFilePath)
+    : getMemoizedRecord(runtimeIdentity);
   const matching = cached && recordMatchesRuntime(cached, runtimeIdentity) ? cached : null;
   if (!matching || !trimToken(matching.refresh_token)) {
     return {

@@ -23,7 +23,7 @@ checkPaths:
   - scripts/**
   - .github/workflows/**
 lastReviewedAt: 2026-10-01
-lastReviewedCommit: ba286d42db5a48f8b70fd649162fb45586e7cfa2
+lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
 lastReviewedNote: 'Reviewed CLI #392: terminal refresh retirement and expired rotation checkpoints preserve the existing OAuth-only and headless boundaries.'
 related:
   - AGENTS.md

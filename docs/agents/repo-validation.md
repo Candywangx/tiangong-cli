@@ -32,7 +32,7 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-01
-lastReviewedCommit: ba286d42db5a48f8b70fd649162fb45586e7cfa2
+lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
 lastReviewedNote: 'Reviewed CLI #392 deterministic terminal, rotation recovery, concurrent and stale-response regressions; the canonical full gate and full-source coverage remain required.'
 related:
   - ../../AGENTS.md
@@ -108,7 +108,7 @@ For runtime-rule composition changes, run `pnpm verify:tidas-public-rules`, the 
 
 ## OAuth refresh recovery proof
 
-`test/oauth-session.test.ts` verifies terminal rejection across independent source/built session loads, a single token request for concurrent rejected-session callers, and rotation followed by a transient UserInfo failure. The recovery checkpoint stays expired until profile verification succeeds. Network, 429, 5xx, malformed responses and unrelated OAuth rejection retain recovery state with fixed redacted error categories. Late token or profile responses cannot replace a newer login, resurrect logout state, delete a foreign-client record, or publish obsolete actor state. `test/supabase-session.test.ts` retains private-file permission, atomic-write and existing lock coverage. These deterministic tests establish CLI behavior; production logs without an OAuth client identity do not establish which client generated incident traffic.
+`test/oauth-session.test.ts` verifies terminal rejection across independent source/built session loads, a single token request for concurrent rejected-session callers, prewarmed independent ESM clients honoring disk retirement before reuse or forced refresh, and rotation followed by a transient UserInfo failure. The recovery checkpoint stays expired until profile verification succeeds. Network, 429, 5xx, malformed responses and unrelated OAuth rejection retain recovery state with fixed redacted error categories. Late token or profile responses cannot replace a newer login, resurrect logout state, delete a foreign-client record, publish obsolete actor state, or recreate a retired memory-only record. `test/supabase-session.test.ts` retains private-file permission, atomic-write and existing lock coverage. These deterministic tests establish CLI behavior; production logs without an OAuth client identity do not establish which client generated incident traffic.
 
 ## Coverage Notes
 

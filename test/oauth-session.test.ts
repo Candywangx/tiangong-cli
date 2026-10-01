@@ -125,10 +125,7 @@ test('auth status inspects only bound local metadata and never exposes credentia
     __testInternals.dropMemoizedRecord(identity);
 
     __testInternals.memoizeRecord(identity, { ...fresh, refresh_token: '' });
-    assert.equal(
-      inspectSupabaseAuthStatus({ runtime: oauthRuntime, now: NOW }).status,
-      'login-required',
-    );
+    assert.equal(inspectSupabaseAuthStatus({ runtime: oauthRuntime, now: NOW }).status, 'ready');
     __testInternals.dropMemoizedRecord(identity);
 
     const stale = { ...fresh, expires_at: 1 };
@@ -444,12 +441,12 @@ test('OAuth mode never falls back to password sign-in when login or refresh is u
   }
 });
 
-test('OAuth refresh can recover a stale in-memory session and cache-disabled mode fails closed', async () => {
+test('OAuth refresh can recover memory-only state and missing cache-disabled state fails closed', async () => {
   __testInternals.SESSION_MEMORY_CACHE.clear();
   __testInternals.ACCESS_TOKEN_MEMORY_CACHE.clear();
   const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-memory-refresh-'));
   const sessionFile = path.join(dir, 'session.json');
-  const oauthRuntime = runtime({ sessionFile });
+  const oauthRuntime = runtime({ sessionFile, disableSessionCache: true });
   const identity = __testInternals.buildRuntimeIdentity(oauthRuntime);
   const stale = __testInternals.buildCachedSessionRecord({
     runtime: identity,
@@ -943,6 +940,15 @@ test('memory-only refresh recovery still requires UserInfo and retires terminal 
     });
     assert.equal(recovered.userEmail, 'verified-memory@example.com');
     assert.equal(recovered.sessionFile, null);
+    const reused = await resolveSupabaseUserSession({
+      runtime: oauthRuntime,
+      now: NOW,
+      fetchImpl: async () => {
+        throw new Error('fresh memory-only reuse performs no request');
+      },
+    });
+    assert.equal(reused.source, 'memory');
+    assert.equal(inspectSupabaseAuthStatus({ runtime: oauthRuntime, now: NOW }).status, 'ready');
     await assert.rejects(
       resolveSupabaseUserSession({
         runtime: oauthRuntime,
@@ -988,6 +994,146 @@ test('profile success after an out-of-band session change cannot publish obsolet
       expectCliCode('SUPABASE_OAUTH_SESSION_CHANGED'),
     );
     assert.deepEqual(JSON.parse(readFileSync(sessionFile, 'utf8')), newer);
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('prewarmed independent clients honor disk retirement before reuse or forced refresh', async () => {
+  const independent = await loadDistModule<typeof import('../src/lib/supabase-session.js')>(
+    'src/lib/supabase-session.js',
+  );
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-prewarmed-'));
+  const sessionFile = path.join(dir, 'session.json');
+  try {
+    for (const forceRefresh of [true, false]) {
+      __testInternals.SESSION_MEMORY_CACHE.clear();
+      independent.__testInternals.SESSION_MEMORY_CACHE.clear();
+      const { oauthRuntime, stale } = staleRefreshFixture(sessionFile);
+      __testInternals.writeCachedSessionRecord(sessionFile, {
+        ...stale,
+        expires_at: Math.floor(NOW.getTime() / 1000) + 3600,
+      });
+      let tokenPosts = 0;
+      const fetchImpl: FetchLike = async () => {
+        tokenPosts += 1;
+        return jsonResponse({ error: 'invalid_grant' }, 400);
+      };
+      await resolveSupabaseUserSession({ runtime: oauthRuntime, fetchImpl, now: NOW });
+      await independent.resolveSupabaseUserSession({ runtime: oauthRuntime, fetchImpl, now: NOW });
+      await assert.rejects(
+        resolveSupabaseUserSession({
+          runtime: oauthRuntime,
+          fetchImpl,
+          now: NOW,
+          forceRefresh: true,
+        }),
+        expectCliCode('SUPABASE_OAUTH_LOGIN_REQUIRED'),
+      );
+      assert.equal(existsSync(sessionFile), false);
+      await assert.rejects(
+        independent.resolveSupabaseUserSession({
+          runtime: oauthRuntime,
+          fetchImpl,
+          now: NOW,
+          forceRefresh,
+        }),
+        (error: unknown) => (error as CliError).code === 'SUPABASE_OAUTH_LOGIN_REQUIRED',
+      );
+      assert.equal(tokenPosts, 1);
+      assert.equal(
+        independent.inspectSupabaseAuthStatus({ runtime: oauthRuntime, now: NOW }).status,
+        'login-required',
+      );
+    }
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    independent.__testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('late memory-only rotation cannot recreate a retired expected record', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const oauthRuntime = runtime({ disableSessionCache: true });
+  const identity = __testInternals.buildRuntimeIdentity(oauthRuntime);
+  const stale = __testInternals.buildCachedSessionRecord({
+    runtime: identity,
+    session: {
+      access_token: 'expired-memory',
+      refresh_token: 'retired-memory',
+      expires_at: 1,
+      expires_in: 1,
+    },
+    userEmail: 'fixture@example.com',
+    now: NOW,
+  });
+  __testInternals.memoizeRecord(identity, stale);
+  let profiles = 0;
+  try {
+    await assert.rejects(
+      resolveSupabaseUserSession({
+        runtime: oauthRuntime,
+        now: NOW,
+        fetchImpl: async (url) => {
+          if (url.endsWith('/oauth/userinfo')) {
+            profiles += 1;
+            return jsonResponse({ sub: USER_ID, email: 'fixture@example.com' });
+          }
+          __testInternals.dropMemoizedRecord(identity);
+          return jsonResponse({
+            access_token: 'late-access',
+            refresh_token: 'late-refresh',
+            token_type: 'bearer',
+            expires_in: 3600,
+          });
+        },
+      }),
+      expectCliCode('SUPABASE_OAUTH_SESSION_CHANGED'),
+    );
+    assert.equal(profiles, 0);
+    assert.equal(__testInternals.SESSION_MEMORY_CACHE.size, 0);
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+  }
+});
+
+test('disk binding replacement suppresses a prewarmed session without touching the foreign record', async () => {
+  __testInternals.SESSION_MEMORY_CACHE.clear();
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-oauth-disk-binding-'));
+  const sessionFile = path.join(dir, 'session.json');
+  const { oauthRuntime, stale } = staleRefreshFixture(sessionFile);
+  const fresh = { ...stale, expires_at: Math.floor(NOW.getTime() / 1000) + 3600 };
+  const foreign = { ...fresh, auth_binding_fingerprint: 'different-client-binding' };
+  let tokenPosts = 0;
+  const fetchImpl: FetchLike = async () => {
+    tokenPosts += 1;
+    return jsonResponse({ error: 'invalid_grant' }, 400);
+  };
+  try {
+    __testInternals.writeCachedSessionRecord(sessionFile, fresh);
+    await resolveSupabaseUserSession({ runtime: oauthRuntime, now: NOW, fetchImpl });
+    __testInternals.writeCachedSessionRecord(sessionFile, foreign);
+    for (const forceRefresh of [false, true]) {
+      await assert.rejects(
+        resolveSupabaseUserSession({ runtime: oauthRuntime, now: NOW, fetchImpl, forceRefresh }),
+        expectCliCode('SUPABASE_OAUTH_LOGIN_REQUIRED'),
+      );
+    }
+    assert.equal(tokenPosts, 0);
+    assert.deepEqual(JSON.parse(readFileSync(sessionFile, 'utf8')), foreign);
+    assert.equal(
+      inspectSupabaseAuthStatus({ runtime: oauthRuntime, now: NOW }).status,
+      'login-required',
+    );
+    const memoryRuntime = runtime({ disableSessionCache: true });
+    const memoryIdentity = __testInternals.buildRuntimeIdentity(memoryRuntime);
+    __testInternals.memoizeRecord(memoryIdentity, { ...fresh, refresh_token: '' });
+    assert.equal(
+      inspectSupabaseAuthStatus({ runtime: memoryRuntime, now: NOW }).status,
+      'login-required',
+    );
   } finally {
     __testInternals.SESSION_MEMORY_CACHE.clear();
     rmSync(dir, { recursive: true, force: true });
