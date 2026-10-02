@@ -26,14 +26,16 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-02
-lastReviewedCommit: 418900f90e2590e5376152f39b5625276a56ff2d
-lastReviewedNote: 'Reviewed CLI #396 native refresh-error source repair: strict Supabase terminal-code envelopes retain token-stage/HTTP-400 fences, exact-session retirement and redacted recovery; package version, dependency lock and release route are unchanged.'
+lastReviewedCommit: 0240ec8c2e3c2c20589c55713dd16b6a38899141
+lastReviewedNote: 'Reviewed CLI #398: separate 0.1.24 version-only preparation from merged native OAuth repair; package identity and eight bound fixtures change, while runtime/dependencies/lock/public exports/release mechanics stay unchanged.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml
   - ./release-setup.md
   - ./agents/repo-validation.md
 ---
+
+Review note, 2026-10-02: CLI #398 prepares the separate version-only 0.1.24 release from native OAuth error repair PR #397 at main `0240ec8c2e3c2c20589c55713dd16b6a38899141`. Only package identity and eight directly bound fixtures advance. Runtime, dependencies, lock, exports, authorization and workflows remain unchanged. At preparation npm latest is 0.1.23 and cli-v0.1.24 is absent; publication and provenance verification still require the canonical release workflow.
 
 Review note, 2026-10-01: CLI #394 prepares 0.1.23 from main `835e7da686657eb12dbd3a3d86dcd962bd0f3c7d` (reviewed source PR #393 / Issue #392). The helper selected next patch 0.1.23 from repository and npm latest 0.1.22, proved the target unpublished, and a fresh exact remote tag read found cli-v0.1.23 absent. Package identity alone made the bound fixture suite RED (10 failures out of 136 tests); advancing the eight directly bound values restored GREEN. Six values bind the running CLI; the other two supply explicit version parameters and remain behaviorally passing while advancing their release identity. Dependencies, the sole frozen pnpm lock, runtime source, public exports, workflows and authentication capabilities remain byte-identical. Publish only after the release PR and exact-head four-platform qualification, automatic merge tag, native pnpm Trusted Publishing/provenance, fresh credential-free consumer and exact workspace adoption; local publication and manual tags remain forbidden.
 

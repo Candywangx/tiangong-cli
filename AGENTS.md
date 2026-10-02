@@ -38,8 +38,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-02
-lastReviewedCommit: 418900f90e2590e5376152f39b5625276a56ff2d
-lastReviewedNote: 'Reviewed CLI #396 native refresh-error source repair: strict Supabase terminal-code envelopes retain token-stage/HTTP-400 fences, exact-session retirement and redacted recovery; package version, dependency lock and release route are unchanged.'
+lastReviewedCommit: 0240ec8c2e3c2c20589c55713dd16b6a38899141
+lastReviewedNote: 'Reviewed CLI #398: separate 0.1.24 version-only preparation from merged native OAuth repair; package identity and eight bound fixtures change, while runtime/dependencies/lock/public exports/release mechanics stay unchanged.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
@@ -50,6 +50,8 @@ related:
   - docs/release-runbook.md
   - docs/release-setup.md
 ---
+
+Review note, 2026-10-02: CLI #398 prepares the separate version-only 0.1.24 release from native OAuth error repair PR #397 at main `0240ec8c2e3c2c20589c55713dd16b6a38899141`. Only package identity and eight directly bound fixtures advance. Runtime, dependencies, lock, exports, authorization and workflows remain unchanged. At preparation npm latest is 0.1.23 and cli-v0.1.24 is absent; publication and provenance verification still require the canonical release workflow.
 
 Review note, 2026-10-01: CLI #394 prepares the separate version-only 0.1.23 release from reviewed OAuth recovery PR #393 at main `835e7da686657eb12dbd3a3d86dcd962bd0f3c7d`. Only package identity and eight directly bound fixture values change. Source runtime, dependencies, lock, public exports, authorization and release workflows remain unchanged. At preparation, npm latest is 0.1.22 and cli-v0.1.23 is absent; publication still requires the canonical release workflow and provenance verification.
 
