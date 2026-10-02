@@ -1139,3 +1139,154 @@ test('disk binding replacement suppresses a prewarmed session without touching t
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+const nativeTerminalRefreshEnvelopes = [
+  { code: 400, error_code: 'refresh_token_not_found', msg: 'private-provider-secret' },
+  { code: 'refresh_token_not_found', message: 'private-provider-secret' },
+];
+
+test('native terminal refresh envelopes retire across independent and concurrent session callers', async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-native-terminal-'));
+  const sessionFile = path.join(dir, 'session.json');
+  try {
+    for (const envelope of nativeTerminalRefreshEnvelopes) {
+      __testInternals.SESSION_MEMORY_CACHE.clear();
+      const { oauthRuntime } = staleRefreshFixture(sessionFile);
+      let tokenPosts = 0;
+      const fetchImpl: FetchLike = async () => {
+        tokenPosts += 1;
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        return jsonResponse(envelope, 400);
+      };
+      const results = await Promise.allSettled(
+        Array.from({ length: 5 }, () =>
+          resolveSupabaseUserSession({ runtime: oauthRuntime, fetchImpl, now: NOW }),
+        ),
+      );
+      for (const result of results) {
+        assert.equal(result.status, 'rejected');
+        if (result.status === 'rejected') {
+          assert.equal((result.reason as CliError).code, 'SUPABASE_OAUTH_LOGIN_REQUIRED');
+          assert.doesNotMatch(JSON.stringify(toErrorPayload(result.reason)), /private-|synthetic/);
+        }
+      }
+      assert.equal(existsSync(sessionFile), false);
+      const independent = await loadDistModule<typeof import('../src/lib/supabase-session.js')>(
+        'src/lib/supabase-session.js',
+      );
+      await assert.rejects(
+        independent.resolveSupabaseUserSession({ runtime: oauthRuntime, fetchImpl, now: NOW }),
+        (error: unknown) => (error as CliError).code === 'SUPABASE_OAUTH_LOGIN_REQUIRED',
+      );
+      assert.equal(tokenPosts, 1);
+    }
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('native terminal responses cannot retire a newer or foreign-client record', async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-native-stale-'));
+  const sessionFile = path.join(dir, 'session.json');
+  try {
+    for (const envelope of nativeTerminalRefreshEnvelopes) {
+      for (const unrelated of [false, true]) {
+        __testInternals.SESSION_MEMORY_CACHE.clear();
+        const { oauthRuntime, identity, stale } = staleRefreshFixture(sessionFile);
+        const newer = {
+          ...stale,
+          refresh_token: 'newer-refresh',
+          ...(unrelated ? { auth_binding_fingerprint: 'foreign-client' } : {}),
+        };
+        await assert.rejects(
+          resolveSupabaseUserSession({
+            runtime: oauthRuntime,
+            now: NOW,
+            fetchImpl: async () => {
+              __testInternals.writeCachedSessionRecord(sessionFile, newer);
+              __testInternals.memoizeRecord(identity, newer);
+              return jsonResponse(envelope, 400);
+            },
+          }),
+          expectCliCode('SUPABASE_OAUTH_LOGIN_REQUIRED'),
+        );
+        assert.deepEqual(JSON.parse(readFileSync(sessionFile, 'utf8')), newer);
+        assert.deepEqual(__testInternals.SESSION_MEMORY_CACHE.get(identity.memoKey), newer);
+      }
+    }
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('native code requires token stage and HTTP 400 while ambiguous native responses preserve recovery', async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tg-cli-native-recoverable-'));
+  const sessionFile = path.join(dir, 'session.json');
+  try {
+    for (const status of [401, 429, 503]) {
+      for (const envelope of nativeTerminalRefreshEnvelopes) {
+        __testInternals.SESSION_MEMORY_CACHE.clear();
+        const { oauthRuntime, stale } = staleRefreshFixture(sessionFile);
+        await assert.rejects(
+          resolveSupabaseUserSession({
+            runtime: oauthRuntime,
+            now: NOW,
+            fetchImpl: async () => jsonResponse(envelope, status),
+          }),
+          expectCliCode('SUPABASE_OAUTH_REFRESH_UNAVAILABLE'),
+        );
+        assert.deepEqual(JSON.parse(readFileSync(sessionFile, 'utf8')), stale);
+      }
+    }
+    for (const envelope of [
+      { error: 'invalid_grant', code: 'refresh_token_not_found' },
+      { code: 400, msg: 'refresh_token_not_found' },
+      { code: 400, error_code: 'private_token_secret' },
+    ]) {
+      __testInternals.SESSION_MEMORY_CACHE.clear();
+      const { oauthRuntime, stale } = staleRefreshFixture(sessionFile);
+      await assert.rejects(
+        resolveSupabaseUserSession({
+          runtime: oauthRuntime,
+          now: NOW,
+          fetchImpl: async () => jsonResponse(envelope, 400),
+        }),
+        expectCliCode('SUPABASE_OAUTH_REFRESH_UNAVAILABLE'),
+      );
+      assert.deepEqual(JSON.parse(readFileSync(sessionFile, 'utf8')), stale);
+    }
+    for (const envelope of nativeTerminalRefreshEnvelopes) {
+      __testInternals.SESSION_MEMORY_CACHE.clear();
+      const { oauthRuntime } = staleRefreshFixture(sessionFile);
+      await assert.rejects(
+        resolveSupabaseUserSession({
+          runtime: oauthRuntime,
+          now: NOW,
+          fetchImpl: async (url) =>
+            url.endsWith('/oauth/token')
+              ? jsonResponse({
+                  access_token: 'rotated-access',
+                  refresh_token: 'rotated-refresh',
+                  token_type: 'bearer',
+                  expires_in: 3600,
+                })
+              : jsonResponse(envelope, 400),
+        }),
+        (error) => {
+          assert.ok(error instanceof CliError);
+          assert.deepEqual(error.details, { stage: 'userinfo', category: 'rejected', status: 400 });
+          assert.doesNotMatch(JSON.stringify(toErrorPayload(error)), /private-|rotated-/);
+          return true;
+        },
+      );
+      const retained = JSON.parse(readFileSync(sessionFile, 'utf8'));
+      assert.equal(retained.refresh_token, 'rotated-refresh');
+      assert.equal(retained.expires_at, 0);
+    }
+  } finally {
+    __testInternals.SESSION_MEMORY_CACHE.clear();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

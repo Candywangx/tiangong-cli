@@ -170,6 +170,28 @@ function parseOAuthTokenSet(value: unknown, previousRefreshToken = ''): OAuthTok
   return { accessToken, refreshToken, expiresIn, scope };
 }
 
+function parseOAuthFailureCode(value: unknown, status: number): string {
+  const fallback = 'oauth_request_failed';
+  if (!isRecord(value)) return fallback;
+
+  // RFC OAuth and Supabase HTTP errors use different envelopes. Mixed forms
+  // are ambiguous: never let one field override a conflicting provider code.
+  if ('error' in value) {
+    if ('error_code' in value || 'code' in value) return fallback;
+    const error = trimString(value.error);
+    return OAUTH_ERROR_PATTERN.test(error) ? error : fallback;
+  }
+
+  // Only the observed, upstream-defined terminal code is admitted. Provider
+  // messages and unknown native code strings must not enter a CLI error payload.
+  if ('error_code' in value) {
+    return value.code === status && value.error_code === 'refresh_token_not_found'
+      ? 'refresh_token_not_found'
+      : fallback;
+  }
+  return value.code === 'refresh_token_not_found' ? 'refresh_token_not_found' : fallback;
+}
+
 async function readBoundedJson(response: ResponseLike, url: string): Promise<unknown> {
   const contentLengthText = response.headers.get('content-length');
   if (contentLengthText) {
@@ -207,10 +229,7 @@ async function readBoundedJson(response: ResponseLike, url: string): Promise<unk
   }
 
   if (!response.ok) {
-    const oauthError =
-      isRecord(parsed) && OAUTH_ERROR_PATTERN.test(trimString(parsed.error))
-        ? trimString(parsed.error)
-        : 'oauth_request_failed';
+    const oauthError = parseOAuthFailureCode(parsed, response.status);
     throw new CliError(`OAuth endpoint returned HTTP ${response.status}.`, {
       code: 'OAUTH_REQUEST_FAILED',
       exitCode: 1,

@@ -31,9 +31,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-01
-lastReviewedCommit: 835e7da686657eb12dbd3a3d86dcd962bd0f3c7d
-lastReviewedNote: 'Reviewed CLI #394: real bound-fixture RED/GREEN, package, full coverage, Docpact and exact-head four-platform gates remain required.'
+lastReviewedAt: 2026-10-02
+lastReviewedCommit: 418900f90e2590e5376152f39b5625276a56ff2d
+lastReviewedNote: 'Reviewed CLI #396 native refresh-error source repair: strict Supabase terminal-code envelopes retain token-stage/HTTP-400 fences, exact-session retirement and redacted recovery; package version, dependency lock and release route are unchanged.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -108,7 +108,7 @@ For runtime-rule composition changes, run `pnpm verify:tidas-public-rules`, the 
 
 ## OAuth refresh recovery proof
 
-`test/oauth-session.test.ts` verifies terminal rejection across independent source/built session loads, a single token request for concurrent rejected-session callers, prewarmed independent ESM clients honoring disk retirement before reuse or forced refresh, and rotation followed by a transient UserInfo failure. The recovery checkpoint stays expired until profile verification succeeds. Network, 429, 5xx, malformed responses and unrelated OAuth rejection retain recovery state with fixed redacted error categories. Late token or profile responses cannot replace a newer login, resurrect logout state, delete a foreign-client record, publish obsolete actor state, or recreate a retired memory-only record. `test/supabase-session.test.ts` retains private-file permission, atomic-write and existing lock coverage. These deterministic tests establish CLI behavior; production logs without an OAuth client identity do not establish which client generated incident traffic.
+`test/oauth-session.test.ts` verifies terminal rejection across independent source/built session loads, a single token request for concurrent rejected-session callers, prewarmed independent ESM clients honoring disk retirement before reuse or forced refresh, and rotation followed by a transient UserInfo failure. The recovery checkpoint stays expired until profile verification succeeds. Network, 429, 5xx, malformed responses and unrelated OAuth rejection retain recovery state with fixed redacted error categories. Late token or profile responses cannot replace a newer login, resurrect logout state, delete a foreign-client record, publish obsolete actor state, or recreate a retired memory-only record. Native Supabase legacy (`code: 400`, `error_code`) and versioned (`code`, `message`) fixtures prove `refresh_token_not_found` retirement across independent/concurrent callers while unknown or mixed envelopes remain recoverable. Token-stage and HTTP-400 fences also exclude native UserInfo, 401, 429 and 5xx failures; stale rejections preserve newer and foreign-client records. Direct protocol tests keep provider text and unknown native codes out of error payloads. `test/supabase-session.test.ts` retains private-file permission, atomic-write and existing lock coverage. These deterministic tests establish CLI behavior; production logs without an OAuth client identity do not establish which client generated incident traffic.
 
 ## Coverage Notes
 

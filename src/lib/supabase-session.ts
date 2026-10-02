@@ -518,7 +518,11 @@ async function refreshWithRefreshToken(options: {
         ? error.details
         : null;
     const status = details && typeof details.status === 'number' ? details.status : null;
-    if (stage === 'token' && status === 400 && details?.error === 'invalid_grant') {
+    if (
+      stage === 'token' &&
+      status === 400 &&
+      (details?.error === 'invalid_grant' || details?.error === 'refresh_token_not_found')
+    ) {
       return null;
     }
     // Provider text, thrown network errors, and credentials never enter the error payload.

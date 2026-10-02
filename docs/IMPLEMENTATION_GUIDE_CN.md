@@ -21,9 +21,9 @@ checkPaths:
   - .oxlintrc.json
   - src/**
   - test/**
-lastReviewedAt: 2026-10-01
-lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
-lastReviewedNote: 'Reviewed CLI #392: OAuth refresh recovery follows the existing shared session owner, private-file and actor verification boundaries; no command, environment or release capability changes.'
+lastReviewedAt: 2026-10-02
+lastReviewedCommit: 418900f90e2590e5376152f39b5625276a56ff2d
+lastReviewedNote: 'Reviewed CLI #396 native error source repair: shared OAuth session boundaries and token-stage/HTTP-400 retirement remain intact; command, environment, package version and release mechanics are unchanged.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml

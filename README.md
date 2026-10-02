@@ -31,9 +31,9 @@ checkPaths:
   - test/auth-identity*.test.ts
   - test/public-auth-identity-receipt.test.ts
   - test/lca-release*.test.ts
-lastReviewedAt: 2026-10-01
-lastReviewedCommit: 835e7da686657eb12dbd3a3d86dcd962bd0f3c7d
-lastReviewedNote: 'Reviewed CLI #394: 0.1.23 is a release candidate from reviewed OAuth recovery; npm latest remains 0.1.22 until automatic publication is verified.'
+lastReviewedAt: 2026-10-02
+lastReviewedCommit: 418900f90e2590e5376152f39b5625276a56ff2d
+lastReviewedNote: 'Reviewed CLI #396 native refresh-error source repair: strict Supabase terminal-code envelopes retain token-stage/HTTP-400 fences, exact-session retirement and redacted recovery; package version, dependency lock and release route are unchanged.'
 ---
 
 Review note, 2026-10-01: CLI #394 prepares 0.1.23 from reviewed OAuth recovery PR #393. The source retires conclusively rejected refresh tokens and preserves rotated-token recovery after profile outages. This repository version is a candidate until the canonical release tag and npm provenance are verified; npm latest is 0.1.22 at preparation. No dataset or new live-account authorization is published by this software release.
@@ -207,6 +207,8 @@ tiangong-lca auth logout
 The callback URI must exactly match the URI registered with the selected Supabase OAuth client. The default is `http://127.0.0.1:49191/oauth/callback`; OAuth client redirect URIs do not support wildcards. Login never accepts a username, password, authorization code, access token, refresh token, or PKCE verifier through argv. On POSIX, the app directory is `0700` and `session.json` is `0600`; writes and refresh-token rotation use a temporary file, atomic rename, and the existing cross-process state lock. Windows callers must keep the selected parent ACL current-user-only because chmod bits are not an ACL.
 
 `auth status` is intentionally local-only and non-mutating. It reports whether a matching session can be used or refreshed, but sets `onlineVerified: false`; it never prints email, tokens, a session path, or a credential fingerprint. `auth whoami` performs the live redacted identity receipt. `auth doctor-auth` first checks local readiness, then performs that live check; a missing OAuth session returns `login-required` so a human can run `auth login`. An AI agent must never ask for or handle the user's password, authorization code, access token, or refresh token.
+
+A terminal token-refresh rejection requires a fresh human login. The source recognizes HTTP 400 RFC `invalid_grant` and unambiguous Supabase `refresh_token_not_found` in legacy or versioned error envelopes; later commands stop resubmitting the rejected local token. Network, rate-limit, upstream, UserInfo and ambiguous-code failures retain recovery state. Provider messages and tokens are excluded from CLI error reports.
 
 Local logout does not revoke the server grant. To invalidate every refresh token for the CLI client, open Account → Connected applications and disconnect TianGong CLI.
 
