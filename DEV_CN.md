@@ -22,9 +22,9 @@ checkPaths:
   - src/**
   - scripts/**
   - .github/workflows/**
-lastReviewedAt: 2026-10-01
-lastReviewedCommit: 4cefa46be940ece66847be9d60472c19e5feecaa
-lastReviewedNote: 'Reviewed CLI #392: terminal refresh retirement and expired rotation checkpoints preserve the existing OAuth-only and headless boundaries.'
+lastReviewedAt: 2026-10-02
+lastReviewedCommit: 418900f90e2590e5376152f39b5625276a56ff2d
+lastReviewedNote: 'Reviewed CLI #396 native refresh-error source repair: strict Supabase terminal-code envelopes retain token-stage/HTTP-400 fences, exact-session retirement and redacted recovery; package version, dependency lock and release route are unchanged.'
 related:
   - AGENTS.md
   - .docpact/config.yaml
@@ -53,6 +53,8 @@ Review note, 2026-09-18: CLI #338 将 Process/LCIA Method 的完整评审报告�
 Review note, 2026-09-20: CLI #340 精确锁定 SDK 0.2.2 与已发布 spec 0.2.1 公共规则。`dataset contract` 的 ruleset、manifest 与 AI context 路径保持，内容由 CLI profile 和经校验的公共定义组合；不再读取 SDK 旧混合规则文件。CLI 包版本不变，公开发行仍需独立版本 PR 和完整门禁。
 
 Review note, 2026-09-21: CLI #350 同步 `tidas-spec` 0.2.2，并允许 Process `validation.review` 使用单对象或非空有序数组。SDK 0.3.0 过渡桥接逐项校验、保留索引和其他独立问题；空数组继续失败。CLI 0.1.18、依赖、命令、认证与发布流程均不变。
+
+CLI #396 的源码修复同时识别 Supabase refresh 响应的旧版 `{code: 400, error_code}` 和版本化 `{code, message}` 信封。仅 token 阶段的 HTTP 400 `invalid_grant` 或无歧义 `refresh_token_not_found` 会退出当前失败会话；未知或冲突码、UserInfo、429/5xx 与网络失败保留恢复状态。源码修复需要后续独立版本发布，不能据此推断现有用户安装已升级。
 
 # 项目配置
 

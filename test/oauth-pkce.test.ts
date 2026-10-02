@@ -415,3 +415,68 @@ test('OAuth PKCE protocol behaves identically from the built runtime', async () 
     /\/auth\/v1\/oauth\/authorize/u,
   );
 });
+
+test('Supabase native token error envelopes project only the verified terminal code', async () => {
+  const cases: Array<{ body: unknown; expected: string }> = [
+    {
+      body: { code: 400, error_code: 'refresh_token_not_found', msg: 'private-token-secret' },
+      expected: 'refresh_token_not_found',
+    },
+    {
+      body: { code: 'refresh_token_not_found', message: 'private-token-secret' },
+      expected: 'refresh_token_not_found',
+    },
+    {
+      body: { code: 400, error_code: 'private_token_secret', msg: 'refresh_token_not_found' },
+      expected: 'oauth_request_failed',
+    },
+    {
+      body: { code: 'private_token_secret', message: 'refresh_token_not_found' },
+      expected: 'oauth_request_failed',
+    },
+    { body: { error_code: 'refresh_token_not_found' }, expected: 'oauth_request_failed' },
+    {
+      body: { code: 401, error_code: 'refresh_token_not_found' },
+      expected: 'oauth_request_failed',
+    },
+    {
+      body: { code: 'refresh_token_not_found', error_code: 'refresh_token_not_found' },
+      expected: 'oauth_request_failed',
+    },
+    {
+      body: { code: 'refresh_token_not_found', error_code: null },
+      expected: 'oauth_request_failed',
+    },
+    {
+      body: { error: 'invalid_grant', error_code: 'refresh_token_not_found', code: 400 },
+      expected: 'oauth_request_failed',
+    },
+    {
+      body: { error: 'invalid_grant', code: 'refresh_token_not_found' },
+      expected: 'oauth_request_failed',
+    },
+    {
+      body: { error: 'invalid_client', error_code: 'refresh_token_not_found' },
+      expected: 'oauth_request_failed',
+    },
+    { body: { error: null, code: 'refresh_token_not_found' }, expected: 'oauth_request_failed' },
+    {
+      body: { code: 400, error_code: null, msg: 'private-token-secret' },
+      expected: 'oauth_request_failed',
+    },
+    { body: {}, expected: 'oauth_request_failed' },
+    { body: null, expected: 'oauth_request_failed' },
+    { body: [], expected: 'oauth_request_failed' },
+  ];
+  for (const { body, expected } of cases) {
+    await assert.rejects(
+      __testInternals.readBoundedJson(response(body, { ok: false, status: 400 }), PROJECT_URL),
+      (error) => {
+        assert.ok(error instanceof CliError);
+        assert.deepEqual(error.details, { status: 400, error: expected });
+        assert.doesNotMatch(JSON.stringify(error), /private.token.secret/);
+        return true;
+      },
+    );
+  }
+});

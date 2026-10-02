@@ -24,9 +24,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-01
-lastReviewedCommit: 835e7da686657eb12dbd3a3d86dcd962bd0f3c7d
-lastReviewedNote: 'Reviewed CLI #394: no secret, environment, dependency, lock, workflow, tag or publication setup changes.'
+lastReviewedAt: 2026-10-02
+lastReviewedCommit: 418900f90e2590e5376152f39b5625276a56ff2d
+lastReviewedNote: 'Reviewed CLI #396 native refresh-error source repair: strict Supabase terminal-code envelopes retain token-stage/HTTP-400 fences, exact-session retirement and redacted recovery; package version, dependency lock and release route are unchanged.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml
