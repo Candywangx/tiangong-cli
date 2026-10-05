@@ -67,7 +67,7 @@ export function snapshotFixture() {
   const calls: string[] = [];
   const fetchImpl: FetchLike = async (url) => {
     calls.push(url);
-    if (url.includes('api.github.com'))
+    if (new URL(url).origin === 'https://api.github.com')
       return new Response(
         JSON.stringify(
           url.includes('/tags/')

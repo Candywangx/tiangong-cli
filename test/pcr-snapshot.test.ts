@@ -120,6 +120,14 @@ test('explicit version lookup excludes latest discovery', async (t) => {
     'explicit-version',
   );
   assert.ok(f.calls[0]!.endsWith('/tags/v0.4.1'));
+  for (const deceptive of [
+    'https://api.github.com.evil.invalid/releases',
+    'https://evil.invalid/api.github.com',
+    'https://api.github.com:8443/releases',
+    'http://api.github.com/releases',
+  ]) {
+    assert.equal(await (await f.fetchImpl(deceptive)).text(), f.database.toString());
+  }
 });
 test('latest compatible content supports independent reader versions', async (t) => {
   const f = snapshotFixture();
@@ -129,7 +137,7 @@ test('latest compatible content supports independent reader versions', async (t)
     { draft: false, prerelease: false, published_at: '2026-10-01', tag_name: 'v0.4.1' },
   ];
   const fetchImpl: FetchLike = async (url) =>
-    url.includes('api.github.com')
+    new URL(url).origin === 'https://api.github.com'
       ? new Response(JSON.stringify(releases))
       : url.includes('v0.5.0/release.json')
         ? new Response(
@@ -146,7 +154,7 @@ test('latest compatible content supports independent reader versions', async (t)
     JSON.stringify({ ...f.sidecar, snapshot: { ...f.sidecar.snapshot, content_version: '0.5.0' } }),
   );
   const supported: FetchLike = async (url) =>
-    url.includes('api.github.com')
+    new URL(url).origin === 'https://api.github.com'
       ? new Response(JSON.stringify(releases))
       : url.includes('v0.5.0/release.json')
         ? new Response(
@@ -1100,7 +1108,7 @@ test('unsupported compatibility schema skips automatic latest but exact selectio
     { draft: false, prerelease: false, published_at: '2026-10-01', tag_name: 'v0.4.1' },
   ];
   const fetchImpl: FetchLike = async (url) =>
-    url.includes('api.github.com')
+    new URL(url).origin === 'https://api.github.com'
       ? new Response(JSON.stringify(url.includes('/tags/v0.5.0') ? releases[0] : releases))
       : url.includes('v0.5.0/release.json')
         ? new Response(
@@ -1431,7 +1439,7 @@ test('audited historical 0.3.1 content retains exact public proofs with current 
     tag_name: 'v0.3.1',
   };
   const fetchImpl: FetchLike = async (url) =>
-    url.includes('api.github.com')
+    new URL(url).origin === 'https://api.github.com'
       ? new Response(JSON.stringify(url.includes('/tags/') ? status : [status]))
       : url.endsWith('/release.json')
         ? new Response(release)
