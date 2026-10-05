@@ -32,9 +32,11 @@ checkPaths:
   - test/public-auth-identity-receipt.test.ts
   - test/lca-release*.test.ts
 lastReviewedAt: 2026-10-05
-lastReviewedCommit: 4fcbcebf2d18a08f201556db63e7faa7657ffac7
-lastReviewedNote: 'Reviewed CLI #401 public PCR task preparation, explicit installed reader, pin reuse and local/offline selection. Public release remains separate.'
+lastReviewedCommit: ab4d851a92767b57378c08f3f4ab24ce0d78a8c5
+lastReviewedNote: 'Reviewed CLI #403: version-only 0.1.25 preparation from merged PCR task snapshots PR #402; package identity and eight directly bound fixtures advance, with runtime/dependencies/lock/exports/workflows unchanged.'
 ---
+
+Review note, 2026-10-05: CLI #403 prepares 0.1.25 from merged task-pinned PCR source #401 / PR #402 at main `ab4d851a92767b57378c08f3f4ab24ce0d78a8c5`. The package version and eight directly bound fixture values advance. npm latest remains 0.1.24 and cli-v0.1.25 is absent at preparation; publication still requires the existing four-platform merge-tag and native pnpm OIDC/provenance route. Runtime source, dependencies, lockfile, exports, authorization and release workflows remain unchanged.
 
 Review note, 2026-10-02: CLI #398 prepares the separate version-only 0.1.24 release from native OAuth error repair PR #397 at main `0240ec8c2e3c2c20589c55713dd16b6a38899141`. Only package identity and eight directly bound fixtures advance. Runtime, dependencies, lock, exports, authorization and workflows remain unchanged. At preparation npm latest is 0.1.23 and cli-v0.1.24 is absent; publication and provenance verification still require the canonical release workflow.
 
@@ -50,7 +52,7 @@ Issue #278 adds a managed Node host interface in source, for the subsequent qual
 
 # TianGong LCA CLI
 
-Package: `@tiangong-lca/cli` Executable: `tiangong-lca` Current package version: `0.1.22` (release preparation; npm latest remains `0.1.21`) Node: `24.19.0`
+Package: `@tiangong-lca/cli` Executable: `tiangong-lca` Source package version: `0.1.25` [Published versions](https://www.npmjs.com/package/@tiangong-lca/cli?activeTab=versions) Node: `24.19.0`
 
 Repository development is single-track on pnpm `11.24.0` and TypeScript `7.0.2`. The published package remains a clean, package-manager-neutral consumer artifact: it contains runtime files only, not pnpm, TypeScript, Oxlint, tests, source-only tooling, or repository lockfiles.
 
