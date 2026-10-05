@@ -26,8 +26,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-05
-lastReviewedCommit: 89c71772ca1afcfc09705f8c27a9703c6bf8ccf6
-lastReviewedNote: 'Reviewed CLI #398: separate 0.1.24 version-only preparation from merged native OAuth repair; package identity and eight bound fixtures change, while runtime/dependencies/lock/public exports/release mechanics stay unchanged.'
+lastReviewedCommit: 4fcbcebf2d18a08f201556db63e7faa7657ffac7
+lastReviewedNote: 'Reviewed CLI #401 feature source at unchanged package0.1.24; canonical separate version-only release, exact-head four-platform qualification and TrustedPublishing remain required.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml

@@ -23,8 +23,8 @@ checkPaths:
   - scripts/**
   - .github/workflows/**
 lastReviewedAt: 2026-10-05
-lastReviewedCommit: 89c71772ca1afcfc09705f8c27a9703c6bf8ccf6
-lastReviewedNote: 'Reviewed CLI #396 native refresh-error source repair: strict Supabase terminal-code envelopes retain token-stage/HTTP-400 fences, exact-session retirement and redacted recovery; package version, dependency lock and release route are unchanged.'
+lastReviewedCommit: 4fcbcebf2d18a08f201556db63e7faa7657ffac7
+lastReviewedNote: 'Reviewed CLI #401 TypeScript snapshot modules and full validation; Node24.19, pnpm11.24 and frozen dependencies remain unchanged.'
 related:
   - AGENTS.md
   - .docpact/config.yaml

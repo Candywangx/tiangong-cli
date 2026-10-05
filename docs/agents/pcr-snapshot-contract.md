@@ -16,8 +16,8 @@ checkPaths:
   - src/main.ts
   - test/pcr-snapshot.test.ts
 lastReviewedAt: 2026-10-05
-lastReviewedCommit: 89c71772ca1afcfc09705f8c27a9703c6bf8ccf6
-lastReviewedNote: 'Reviewed CLI #401 task snapshot ownership, declared compatibility, separate trust and forced local consumption; publication remains separately qualified.'
+lastReviewedCommit: 4fcbcebf2d18a08f201556db63e7faa7657ffac7
+lastReviewedNote: 'Reviewed CLI #401 final frozen implementation, independent fixes, strict metadata and audited0.3.1 content with0.4.1 reader; existing tasks remain pinned without discovery.'
 related:
   - runtime-distribution-contract.md
   - repo-architecture.md

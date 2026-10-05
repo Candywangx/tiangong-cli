@@ -19,8 +19,8 @@ checkPaths:
   - test/runtime-*.test.ts
   - package.json
 lastReviewedAt: 2026-10-05
-lastReviewedCommit: 89c71772ca1afcfc09705f8c27a9703c6bf8ccf6
-lastReviewedNote: 'Reviewed for CLI #336: public-rule assets are contract inputs, not managed runtime components. Descriptor, manifest, host admission, cache, bootstrap, platform and component-release contracts remain unchanged.'
+lastReviewedCommit: 4fcbcebf2d18a08f201556db63e7faa7657ffac7
+lastReviewedNote: 'Reviewed CLI #401 separate PCR data cache and explicit installed-tool binding using existing download/CommandSpec boundaries; runtime trust anchors and managed Node authorization remain unchanged.'
 related:
   - docs/agents/repo-architecture.md
   - docs/agents/repo-validation.md
