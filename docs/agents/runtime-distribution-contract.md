@@ -18,8 +18,8 @@ checkPaths:
   - scripts/bootstrap/**
   - test/runtime-*.test.ts
   - package.json
-lastReviewedAt: 2026-09-18
-lastReviewedCommit: 4316c205453071c8cbb45e06480344f8eae5e041
+lastReviewedAt: 2026-10-05
+lastReviewedCommit: 89c71772ca1afcfc09705f8c27a9703c6bf8ccf6
 lastReviewedNote: 'Reviewed for CLI #336: public-rule assets are contract inputs, not managed runtime components. Descriptor, manifest, host admission, cache, bootstrap, platform and component-release contracts remain unchanged.'
 related:
   - docs/agents/repo-architecture.md

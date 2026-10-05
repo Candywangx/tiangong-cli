@@ -14,7 +14,7 @@ export type DownloadOptions = {
   sleep?: (milliseconds: number) => Promise<void>;
 };
 async function attempt(
-  archive: RuntimeComponent['archive'],
+  archive: Pick<RuntimeComponent['archive'], 'url' | 'bytes' | 'sha256'>,
   file: string,
   options: DownloadOptions,
 ): Promise<void> {
@@ -118,7 +118,7 @@ async function attempt(
   }
 }
 export async function downloadRuntimeArchive(
-  archive: RuntimeComponent['archive'],
+  archive: Pick<RuntimeComponent['archive'], 'url' | 'bytes' | 'sha256'>,
   file: string,
   options: DownloadOptions = {},
 ): Promise<void> {

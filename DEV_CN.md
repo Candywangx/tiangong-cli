@@ -22,8 +22,8 @@ checkPaths:
   - src/**
   - scripts/**
   - .github/workflows/**
-lastReviewedAt: 2026-10-02
-lastReviewedCommit: 418900f90e2590e5376152f39b5625276a56ff2d
+lastReviewedAt: 2026-10-05
+lastReviewedCommit: 89c71772ca1afcfc09705f8c27a9703c6bf8ccf6
 lastReviewedNote: 'Reviewed CLI #396 native refresh-error source repair: strict Supabase terminal-code envelopes retain token-stage/HTTP-400 fences, exact-session retirement and redacted recovery; package version, dependency lock and release route are unchanged.'
 related:
   - AGENTS.md

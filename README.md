@@ -786,3 +786,5 @@ tiangong-lca process --help
 tiangong-lca lifecyclemodel --help
 tiangong-lca publish --help
 ```
+
+Task PCR preparation uses `tiangong-lca pcr snapshot ensure --task-dir <absolute-dir> --tool-root <installed-PCR-package> --json`. Continue with `tiangong-lca pcr exec --task-dir <absolute-dir> -- guidance --pcr <id> --format json`. Initial connected preparation selects the latest compatible published content; subsequent work retains exact snapshot and reader bytes. Use `--version` for an explicit release or `--offline` for verified cached content. Tools are explicitly selected installations and are never downloaded by this operation. See [the task PCR snapshot contract](docs/agents/pcr-snapshot-contract.md).
