@@ -21,9 +21,9 @@ checkPaths:
   - .oxlintrc.json
   - src/**
   - test/**
-lastReviewedAt: 2026-10-02
-lastReviewedCommit: 418900f90e2590e5376152f39b5625276a56ff2d
-lastReviewedNote: 'Reviewed CLI #396 native error source repair: shared OAuth session boundaries and token-stage/HTTP-400 retirement remain intact; command, environment, package version and release mechanics are unchanged.'
+lastReviewedAt: 2026-10-05
+lastReviewedCommit: 4fcbcebf2d18a08f201556db63e7faa7657ffac7
+lastReviewedNote: 'Reviewed CLI #401 native command routing and PCR-owned scientific semantics; no duplicate method interpretation or executable provisioning is introduced.'
 related:
   - ../AGENTS.md
   - ../.docpact/config.yaml
@@ -1394,3 +1394,5 @@ CLI 现在额外有一条独立于质量门的 npm 发布链路：
 如果后续继续扩能力，也必须遵守同一条原则：
 
 先判断它是不是稳定的业务动作，再决定它是不是应该进入 `tiangong-lca` 命令树。
+
+PCR 任务快照由 `src/lib/pcr-snapshot-*.ts` 管理。新任务通过 `pcr snapshot ensure` 选择已发布且兼容的内容，并保存不可变任务 pin；后续 `pcr exec` 强制使用该快照和首次明确选择的已安装 PCR 工具。详见 [任务快照契约](agents/pcr-snapshot-contract.md)。PCR 核心继续负责离线只读语义，不新增运行时依赖。

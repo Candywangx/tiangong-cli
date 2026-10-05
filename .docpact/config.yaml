@@ -69,6 +69,7 @@ ownership:
           - src/lib/review-*.ts
           - src/lib/run.ts
           - src/lib/runtime-rulesets.ts
+          - src/lib/pcr-snapshot-*.ts
           - src/lib/state-lock.ts
           - src/lib/tidas-languages.ts
           - src/lib/tidas-sdk-validation.ts
@@ -228,6 +229,7 @@ routing:
         - src/lib/review-*.ts
         - src/lib/run.ts
         - src/lib/runtime-rulesets.ts
+        - src/lib/pcr-snapshot-*.ts
         - src/lib/state-lock.ts
         - src/lib/tidas-languages.ts
         - docs/IMPLEMENTATION_GUIDE_CN.md
@@ -477,6 +479,8 @@ rules:
       - path: src/lib/review-*.ts
         kind: command-logic
       - path: src/lib/run.ts
+        kind: command-logic
+      - path: src/lib/pcr-snapshot-*.ts
         kind: command-logic
       - path: src/lib/runtime-rulesets.ts
         kind: command-logic
@@ -747,3 +751,18 @@ rules:
       - path: docs/agents/exact-reference-intent-contract.md
         mode: review_or_update
     reason: Exact-reference exceptions must retain consumer, actor, content and review binding without changing root or default policy.
+
+  - id: cli-pcr-snapshot-contract
+    scope: repo
+    repo: cli
+    triggers:
+      - path: docs/agents/pcr-snapshot-contract.md
+        kind: governed-doc
+      - path: src/lib/pcr-snapshot-*.ts
+        kind: command-logic
+      - path: test/pcr-snapshot.test.ts
+        kind: validation
+    requiredDocs:
+      - path: docs/agents/pcr-snapshot-contract.md
+        mode: review_or_update
+    reason: Task PCR preparation and consumption must preserve compatibility, separate trust, immutable pins and offline core ownership.

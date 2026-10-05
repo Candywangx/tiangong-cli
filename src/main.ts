@@ -16,9 +16,10 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv = process.env)
     process.stderr.write(`${JSON.stringify(toErrorPayload(error))}\n`);
     return 69;
   }
-  const dotEnvStatus = isRuntimeCommand(argv)
-    ? { loaded: false, path: path.join(process.cwd(), '.env'), count: 0 }
-    : loadDotEnv(process.cwd(), env);
+  const dotEnvStatus =
+    isRuntimeCommand(argv) || argv[0] === 'pcr'
+      ? { loaded: false, path: path.join(process.cwd(), '.env'), count: 0 }
+      : loadDotEnv(process.cwd(), env);
   const result = await executeCli(argv, {
     env,
     dotEnvStatus,

@@ -37,9 +37,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-02
-lastReviewedCommit: 0240ec8c2e3c2c20589c55713dd16b6a38899141
-lastReviewedNote: 'Reviewed CLI #398: separate 0.1.24 version-only preparation from merged native OAuth repair; package identity and eight bound fixtures change, while runtime/dependencies/lock/public exports/release mechanics stay unchanged.'
+lastReviewedAt: 2026-10-05
+lastReviewedCommit: 4fcbcebf2d18a08f201556db63e7faa7657ffac7
+lastReviewedNote: 'Reviewed CLI #401 task snapshot ensure/status/exec ownership, immutable context and offline PCR delegation; account authorization and dataset writes remain unchanged.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
@@ -191,3 +191,5 @@ Install the versioned local hook once per checkout:
 ```
 
 The `pre-push` hook runs `scripts/docpact-gate.sh`, which delegates CLI lookup to `scripts/docpact` and performs strict config validation plus enforced lint before the push leaves the machine. It then runs `pnpm prepush:gate` as the local test gate. The sole exception is a complete, verified branch-deletion-only stdin stream: it publishes no source. Tags, source/mixed updates, empty/TTY/malformed input and classification failures retain both gates. The wrapper checks `DOCPACT_BIN`, Cargo install locations, Homebrew install locations, and then `PATH`, so local agent shells should not fail only because bare `docpact` is unavailable. The default comparison base is `origin/main`. Override it for unusual stacks with `DOCPACT_BASE_REF=<ref>` or `scripts/docpact-gate.sh --base <ref>`. The gate writes its detailed report to a temporary file so normal pushes do not create `.docpact/runs/` artifacts. The GitHub `quality-gate` supports manual exact-head reproduction and reusable invocation; a detected CLI release must pass its four-platform invocation before the tag job can run.
+
+PCR content discovery, task pins and forced local reader execution belong to `src/lib/pcr-snapshot-*.ts`; see `docs/agents/pcr-snapshot-contract.md`. PCR owns offline reader and scientific semantics. Task snapshots and selected installed tool bytes are immutable; release and snapshot source fingerprints use different hash domains. No runtime dependency or executable installation is added.

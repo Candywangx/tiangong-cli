@@ -30,9 +30,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-02
-lastReviewedCommit: 0240ec8c2e3c2c20589c55713dd16b6a38899141
-lastReviewedNote: 'Reviewed CLI #398: separate 0.1.24 version-only preparation from merged native OAuth repair; package identity and eight bound fixtures change, while runtime/dependencies/lock/public exports/release mechanics stay unchanged.'
+lastReviewedAt: 2026-10-05
+lastReviewedCommit: 4fcbcebf2d18a08f201556db63e7faa7657ffac7
+lastReviewedNote: 'Reviewed CLI #401 separation of release discovery, data cache, task pin and selected reader closure; PCR core remains offline/read-only.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -296,3 +296,5 @@ Important constraints:
 ## Local Docpact Push Gate
 
 This repository has a versioned local `pre-push` hook under `.githooks/pre-push` that delegates to `scripts/docpact-gate.sh` and then runs `pnpm prepush:gate`. The gate resolves the CLI through `scripts/docpact`, so local agent shells do not need bare `docpact` on `PATH`. The hook is the local guard for docpact config validation, enforced doc-governance linting, and the CLI test gate; ordinary GitHub push tests are replaced by this local gate plus release-time gates.
+
+Task PCR content uses `src/lib/pcr-snapshot-{contract,release,cache,tool,command}.ts` and the dedicated [task snapshot contract](pcr-snapshot-contract.md). The CLI prepares exact published compatible content into a separate data cache, retains task and installed reader pins, and forces those selectors during shell-free PCR consumption. PCR core remains the offline semantic owner.

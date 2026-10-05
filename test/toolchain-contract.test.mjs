@@ -767,6 +767,21 @@ function assertRootBinBehavior(binPath, cwd, expectedVersion) {
   assert.equal(JSON.parse(runtime.stdout).package.version, expectedVersion);
   assert.equal(runtime.stderr, '');
 
+  const pcrHelp = runBin(binPath, ['pcr', '--help'], cwd);
+  assertSuccessfulExit(pcrHelp);
+  assert.match(pcrHelp.stdout, /snapshot ensure\|status/u);
+  const pcrTask = join(cwd, 'pcr-task');
+  const pcrCache = join(cwd, 'pcr-cache');
+  const pcrStatus = runBin(
+    binPath,
+    ['pcr', 'snapshot', 'status', '--task-dir', pcrTask, '--cache-dir', pcrCache, '--json'],
+    cwd,
+  );
+  assert.equal(pcrStatus.status, 2);
+  assert.equal(JSON.parse(pcrStatus.stdout).status, 'missing');
+  assert.equal(existsSync(pcrTask), false);
+  assert.equal(existsSync(pcrCache), false);
+
   const error = runBin(binPath, ['--definitely-unknown'], cwd);
   assert.ifError(error.error);
   assert.equal(error.status, 2, error.stderr || error.stdout);

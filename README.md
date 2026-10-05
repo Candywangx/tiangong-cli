@@ -31,9 +31,9 @@ checkPaths:
   - test/auth-identity*.test.ts
   - test/public-auth-identity-receipt.test.ts
   - test/lca-release*.test.ts
-lastReviewedAt: 2026-10-02
-lastReviewedCommit: 0240ec8c2e3c2c20589c55713dd16b6a38899141
-lastReviewedNote: 'Reviewed CLI #398: separate 0.1.24 version-only preparation from merged native OAuth repair; package identity and eight bound fixtures change, while runtime/dependencies/lock/public exports/release mechanics stay unchanged.'
+lastReviewedAt: 2026-10-05
+lastReviewedCommit: 4fcbcebf2d18a08f201556db63e7faa7657ffac7
+lastReviewedNote: 'Reviewed CLI #401 public PCR task preparation, explicit installed reader, pin reuse and local/offline selection. Public release remains separate.'
 ---
 
 Review note, 2026-10-02: CLI #398 prepares the separate version-only 0.1.24 release from native OAuth error repair PR #397 at main `0240ec8c2e3c2c20589c55713dd16b6a38899141`. Only package identity and eight directly bound fixtures advance. Runtime, dependencies, lock, exports, authorization and workflows remain unchanged. At preparation npm latest is 0.1.23 and cli-v0.1.24 is absent; publication and provenance verification still require the canonical release workflow.
@@ -786,3 +786,5 @@ tiangong-lca process --help
 tiangong-lca lifecyclemodel --help
 tiangong-lca publish --help
 ```
+
+Task PCR preparation uses `tiangong-lca pcr snapshot ensure --task-dir <absolute-dir> --tool-root <installed-PCR-package> --json`. Continue with `tiangong-lca pcr exec --task-dir <absolute-dir> -- guidance --pcr <id> --format json`. Initial connected preparation selects the latest compatible published content; subsequent work retains exact snapshot and reader bytes. Use `--version` for an explicit release or `--offline` for verified cached content. Tools are explicitly selected installations and are never downloaded by this operation. See [the task PCR snapshot contract](docs/agents/pcr-snapshot-contract.md).

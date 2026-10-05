@@ -1,0 +1,24 @@
+{
+  "kind": "tiangong-pcr-library",
+  "format_version": 1,
+  "snapshot": {
+    "available_languages": [
+      "en-US"
+    ],
+    "content_version": "0.3.1",
+    "source_commit": "4226d2ab97d53682c967dd29a2a04d97debfc15e",
+    "source_sha256": "sha256:c7b77787ca883ed4169bbda356b538232a34489ddefd132c7b0fd30eff846ae3",
+    "records": 2878,
+    "material_records": 832,
+    "aliases": 2047,
+    "original_bytes": 123391845
+  },
+  "bytes": 40386560,
+  "sha256": "sha256:a2ddd7717f8df3651100c4f08cb97a65e6c8fa2a5b2699f25560b92b4e7a85de",
+  "index_sha256": {
+    "records": "sha256:eeb137e7b6ca441b6908e2b297abe985f20373812288ad5a206f66c42cbe1cc6",
+    "aliases": "sha256:2a0205c7f332544890f597428deeaff087d1934048b372307310f1fa7659993e",
+    "coverage": "sha256:16f56a730a8c9b5150a8b4915cea9aa6bd852e61e171ac4f588187024bc07ff9",
+    "files": "sha256:7e9229abc013f9abf3a2ca2bc47aa4f445edc4acb4f30c59574bc8a396337127"
+  }
+}
